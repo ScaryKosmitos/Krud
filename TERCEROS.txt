@@ -1,0 +1,26 @@
+COMPONENTES DE TERCEROS QUE USA KRUD
+
+Krud está hecho con estos componentes de otros autores. Cada uno se rige por
+su propia licencia (no por la de Krud). En el programa instalado, el texto
+completo de cada licencia está en la carpeta «licencias».
+
+Principales:
+
+- Python (Python Software Foundation)
+  Licencia PSF-2.0 · https://www.python.org
+- Flet (Appveyor Systems Inc.)
+  Licencia Apache-2.0 · https://flet.dev
+- Flutter, usado por el visor de Flet (Google LLC y otros)
+  Licencia BSD-3-Clause · https://flutter.dev
+- openpyxl (Eric Gazoni, Charlie Clark)
+  Licencia MIT · https://openpyxl.readthedocs.io
+- PyInstaller, con el que se arma el .exe
+  Licencia GPL-2.0 con excepción para el cargador: permite distribuir
+  programas propietarios armados con él · https://pyinstaller.org
+- SQLite, la base de datos (dominio público) · https://sqlite.org
+
+Además, las librerías de las que dependen las anteriores (por ejemplo msgpack,
+httpx, certifi y otras), cada una con su licencia en la carpeta «licencias».
+
+La página del celular usa la letra Atkinson Hyperlegible (Braille Institute of
+America, licencia SIL Open Font License 1.1), cargada desde Google Fonts.

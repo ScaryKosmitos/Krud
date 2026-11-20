@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- El enlace lleva la clave del negocio: que no se mande a otras páginas ni la indexen los buscadores -->
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<!-- Añadida a la pantalla de inicio se abre como una app, sin la barra de Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Inventario">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EDF1F0">
+<link rel="apple-touch-icon" href="icono.png">
+<link rel="icon" href="icono.png">
+<!-- Letra hecha para leer fácil (para personas con baja visión). Sin internet se usa la del celular -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<title>Inventario</title>
+<style>
+  /*
+   * El pedido listo: fondo gris verdoso y una tarjeta blanca por categoría. En "Pedido" cada
+   * tarjeta es el pedido de esa categoría, con la cantidad sugerida en grande y su botón para
+   * mandarlo; "Inventario" es todo, una línea por producto con lo que queda.
+   */
+  :root {
+    --fondo: #EDF1F0;
+    --hoja: #FFFFFF;
+    --tinta: #10302E;
+    --suave: #5A6B69;
+    --linea: #DCE3E1;
+    --riel: #DCE4E2;
+    --marca: #176B5B;
+    --rojo: #B8322B;
+    --aviso: #9A4D00;
+    --aviso-fondo: #FCEEDC;
+    --escala: 1;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--fondo); }
+  body {
+    max-width: 560px; margin: 0 auto; min-height: 100vh; color: var(--tinta); background: var(--fondo);
+    font-family: "Atkinson Hyperlegible", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: calc(19px * var(--escala)); line-height: 1.3;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--marca); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  /* Encabezado */
+  header { display: flex; align-items: flex-start; gap: 8px; padding: calc(22px + env(safe-area-inset-top)) 16px 4px 20px; }
+  header .titulos { flex: 1; min-width: 0; }
+  h1 { font-size: 1.45em; line-height: 1.12; overflow-wrap: anywhere; }
+  .subido { color: var(--suave); font-size: .8em; margin-top: 4px; }
+  .icono {
+    flex: none; width: 46px; height: 46px; border-radius: 14px; border: 1.5px solid var(--linea);
+    background: var(--hoja); display: grid; place-items: center; font-weight: 700; font-size: .95em;
+  }
+  .icono svg { width: 22px; height: 22px; }
+  .icono.girando svg { animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .icono.girando svg { animation: none; } }
+
+  /* Pestañas: dos botones en un riel; la elegida queda en blanco */
+  nav { display: flex; gap: 4px; margin: 14px 12px 0; padding: 4px; border-radius: 15px; background: var(--riel); }
+  nav button {
+    flex: 1; min-height: 46px; padding: 6px 8px; border: 0; border-radius: 11px; background: none;
+    color: var(--suave); font-size: .95em; line-height: 1.15;
+  }
+  nav button[aria-selected="true"] {
+    background: var(--hoja); color: var(--tinta); font-weight: 700; box-shadow: 0 1px 3px rgba(16, 48, 46, .14);
+  }
+
+  /* Avisos (sin internet, subida vieja) */
+  .aviso {
+    margin: 12px 12px 0; padding: 12px 16px; border-radius: 14px; background: var(--aviso-fondo);
+    color: var(--aviso); font-size: .82em;
+  }
+
+  /* Arriba del pedido: cuánto hay que pedir y cómo se cambia */
+  .intro { padding: 18px 20px 0; }
+  .intro .cuenta { font-size: .95em; }
+  .intro .ayuda { margin-top: 4px; color: var(--suave); font-size: .8em; }
+
+  /* Tarjeta de cada categoría */
+  .tarjeta { margin: 14px 12px 0; background: var(--hoja); border-radius: 18px; overflow: hidden; }
+  .cabeza { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 16px 18px 10px; }
+  .cabeza h2 { font-size: 1.1em; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
+  .cabeza .cuantos { flex: none; color: var(--suave); font-size: .8em; }
+
+  /* Producto del pedido: casilla, nombre, cuánto queda (en rojo) y la cantidad a pedir, que es lo que más se ve */
+  .producto {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 12px 16px 12px 14px;
+    border-top: 1px solid var(--linea);
+  }
+  .casilla {
+    flex: none; width: 30px; height: 30px; padding: 0; border: 2.4px solid var(--suave); border-radius: 8px;
+    background: var(--hoja); display: grid; place-items: center;
+  }
+  .casilla svg { width: 19px; height: 19px; color: #fff; visibility: hidden; }
+  .casilla[aria-checked="true"] { background: var(--marca); border-color: var(--marca); }
+  .casilla[aria-checked="true"] svg { visibility: visible; }
+  .producto .texto { flex: 1 1 6em; min-width: 0; }
+  .producto .nombre { font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; text-wrap: pretty; }
+  .queda { margin-top: 4px; color: var(--rojo); font-weight: 700; font-size: .88em; }
+  .cantidad { flex: none; margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .cantidad button {
+    width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1.5px solid var(--linea); background: var(--hoja);
+    font-size: 1.2em; font-weight: 700; line-height: 1;
+  }
+  .cantidad button:disabled { opacity: .35; cursor: default; }
+  .cantidad output { min-width: 2.4ch; text-align: center; font-size: 1.4em; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* Sin marcar no se pide: queda tachado */
+  .fuera .nombre { color: var(--suave); text-decoration: line-through; text-decoration-thickness: 2px; }
+  .fuera .queda { color: var(--suave); font-weight: 400; }
+  .fuera .cantidad { opacity: .35; pointer-events: none; }
+
+  .enviar {
+    display: block; width: calc(100% - 36px); min-height: 54px; margin: 6px 18px 18px; padding: 8px 16px;
+    border: 0; border-radius: 14px; background: var(--marca); color: #fff; font-weight: 700; font-size: .95em;
+  }
+  .enviar:disabled { background: var(--linea); color: var(--suave); cursor: default; }
+
+  /* Inventario: buscador y una línea por producto; lo que hay que pedir sale en rojo */
+  .buscar { position: relative; margin: 14px 12px 0; }
+  .buscar svg { position: absolute; left: 15px; top: 50%; width: 22px; height: 22px; margin-top: -11px; color: var(--suave); pointer-events: none; }
+  .buscar input {
+    width: 100%; height: 54px; padding: 0 16px 0 48px; border: 1.5px solid var(--linea); border-radius: 14px;
+    background: var(--hoja); font: inherit; color: var(--tinta); -webkit-appearance: none; appearance: none;
+  }
+  .buscar input::placeholder { color: var(--suave); }
+  .buscar input:focus { outline: none; border-color: var(--marca); box-shadow: 0 0 0 3px rgba(23, 107, 91, .2); }
+  .item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 10px 18px;
+    border-top: 1px solid var(--linea);
+  }
+  .item .nombre { min-width: 0; overflow-wrap: anywhere; }
+  .item .pedir { display: block; margin-top: 2px; color: var(--rojo); font-weight: 700; font-size: .8em; }
+  .item .stock { flex: none; font-weight: 700; font-size: 1.15em; font-variant-numeric: tabular-nums; }
+  .item.bajo .stock { color: var(--rojo); }
+  .mas { margin: 14px 12px 0; }
+  .mas button {
+    width: 100%; min-height: 54px; border-radius: 14px; border: 1.5px solid var(--linea); background: var(--hoja); font-weight: 700;
+  }
+
+  /* Lista vacía */
+  .vacio { margin: 14px 12px 0; padding: 26px 20px; border-radius: 18px; background: var(--hoja); }
+  .vacio svg { width: 44px; height: 44px; color: var(--suave); }
+  .vacio.bien svg { color: var(--marca); }
+  .vacio b { display: block; margin-top: 8px; font-size: 1.05em; }
+  .vacio p { margin-top: 2px; color: var(--suave); font-size: .85em; }
+
+  /* Pantallas de espera y de error */
+  .pantalla { padding: 18vh 24px 0; }
+  .pantalla svg { width: 52px; height: 52px; color: var(--suave); }
+  .pantalla h2 { margin: 12px 0 8px; font-size: 1.3em; }
+  .pantalla p { color: var(--suave); margin-bottom: 18px; max-width: 30em; }
+  .pantalla button { height: 54px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--marca); color: #fff; font-weight: 700; }
+
+  /* Botón de abajo */
+  .abajo {
+    position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(rgba(237, 241, 240, 0), var(--fondo) 35%);
+  }
+  .enviar-todo {
+    display: block; width: 100%; max-width: 536px; margin: 0 auto; height: 60px; border: 0; border-radius: 16px;
+    background: var(--tinta); color: #fff; font-weight: 700; font-size: 1em;
+  }
+  .enviar-todo:disabled { opacity: .4; cursor: default; }
+</style>
+</head>
+<body>
+<div id="cargando" class="pantalla" aria-live="polite">
+  <div data-icono="caja"></div>
+  <h2>Cargando el inventario...</h2>
+</div>
+
+<div id="problema" class="pantalla" hidden>
+  <div id="problema-icono"></div>
+  <h2 id="problema-titulo"></h2>
+  <p id="problema-texto"></p>
+  <button id="reintentar" type="button">Intentar otra vez</button>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="titulos">
+      <h1 id="nombre"></h1>
+      <p class="subido" id="subido"></p>
+    </div>
+    <button class="icono" id="letra" type="button" aria-label="Cambiar el tamaño de la letra">Aa</button>
+    <button class="icono" id="recargar" type="button" aria-label="Actualizar" data-icono="recargar"></button>
+  </header>
+  <div id="avisos"></div>
+  <nav role="tablist">
+    <button role="tab" id="tab-pedido" aria-selected="true" type="button"></button>
+    <button role="tab" id="tab-inventario" aria-selected="false" type="button"></button>
+  </nav>
+  <main id="hoja"></main>
+</div>
+
+<div class="abajo" id="abajo" hidden>
+  <button class="enviar-todo" id="enviar-todo" type="button"></button>
+</div>
+
+<script>
+// --- Conexión con la nube: el mismo proyecto de Supabase que usa Krud (ver nube.py) ---
+const SUPABASE_URL = "https://rwvoqdosykqfuoeptlkr.supabase.co";
+const CLAVE_PUBLICA = "sb_publishable_kS4gLPQu4P816cBQ9YUG8Q_YtihjDwK";
+
+// Para probar en el computador: ?api=http://localhost:PUERTO&clave_api=... (solo desde localhost)
+const parametros = new URLSearchParams(location.search);
+const esLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+const API = (esLocal && parametros.get("api")) || SUPABASE_URL;
+const CLAVE_API = (esLocal && parametros.get("clave_api")) || CLAVE_PUBLICA;
+
+const POR_PAGINA = 200;                 // filas del inventario antes de "Mostrar más"
+const ESCALAS = [1, 1.18, 1.36];
+const MINUTOS_ENTRE_RECARGAS = 2;
+const SEMANAS_DE_PEDIDO = 2;            // la cantidad sugerida alcanza para unas dos semanas
+
+// --- Guardado en el celular (puede fallar en modo privado: entonces solo no se recuerda) ---
+function leerGuardado(nombre) {
+  try { return JSON.parse(localStorage.getItem(nombre)); } catch { return null; }
+}
+function guardar(nombre, valor) {
+  try { localStorage.setItem(nombre, JSON.stringify(valor)); } catch { /* sin espacio o modo privado */ }
+}
+function borrarGuardado(nombre) {
+  try { localStorage.removeItem(nombre); } catch { /* modo privado */ }
+}
+
+// La clave va en el enlace (?k=...). Se recuerda por si se abre sin ella
+const clave = parametros.get("k") || new URLSearchParams(location.hash.slice(1)).get("k") || leerGuardado("krud_clave");
+if (clave) guardar("krud_clave", clave);
+
+const estado = {
+  datos: null,              // lo que devuelve krud_ver
+  pestana: "pedido",
+  texto: "",
+  limite: POR_PAGINA,
+  // Lo que se sacó del pedido y las cantidades cambiadas a mano: solo mientras la app está abierta.
+  // Al volver a abrirla todo sale marcado y con la cantidad sugerida, para no olvidar nada
+  fuera: new Set(),
+  cantidades: new Map(),
+  escala: leerGuardado("krud_escala") || 1,
+};
+
+const $ = (id) => document.getElementById(id);
+const numero = new Intl.NumberFormat("es-CO");
+const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, "es");
+const porCategoria = (a, b) => a.categoria.localeCompare(b.categoria, "es");
+const esBajo = (p) => p.minimo > 0 && p.stock < p.minimo;
+const plural = (n, una, varias) => `${numero.format(n)} ${n === 1 ? una : varias}`;
+
+// Íconos de línea (sin emojis), todos del mismo trazo
+const trazo = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+const ICONOS = {
+  caja: `<svg ${trazo}><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>`,
+  enlace: `<svg ${trazo}><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>`,
+  ajustes: `<svg ${trazo}><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>`,
+  candado: `<svg ${trazo}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`,
+  sinSenal: `<svg ${trazo}><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12a10 10 0 0 1 13 0"/><path d="M9 15.5a5 5 0 0 1 6 0"/><path d="M12 19h.01"/><path d="m3 3 18 18"/></svg>`,
+  listo: `<svg ${trazo}><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></svg>`,
+  lupa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  recargar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>',
+  marca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+};
+for (const lugar of document.querySelectorAll("[data-icono]")) lugar.innerHTML = ICONOS[lugar.dataset.icono];
+
+function sinTildes(texto) {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function describirCuando(iso) {
+  const fecha = new Date(iso);
+  if (isNaN(fecha)) return "";
+  const minutos = Math.round((Date.now() - fecha) / 60000);
+  const hora = fecha.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+  if (minutos < 1) return "hace un momento";
+  if (minutos < 60) return `hace ${minutos} ${minutos === 1 ? "minuto" : "minutos"}`;
+  if (fecha >= hoy) return `hoy a las ${hora}`;
+  if (fecha >= ayer) return `ayer a las ${hora}`;
+  return `el ${fecha.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })} a las ${hora}`;
+}
+
+// --- La cantidad sugerida ---
+// Que alcance para unas dos semanas según lo que se vende, y nunca menos que volver al mínimo
+// (más lo de una semana). De 10 para arriba se redondea de 5 en 5
+function sugerida(p) {
+  const dias = (estado.datos.datos && estado.datos.datos.dias_ventas) || 30;
+  const semana = (p.vendido || 0) / dias * 7;
+  const objetivo = Math.max(p.minimo + Math.ceil(semana), Math.ceil(semana * SEMANAS_DE_PEDIDO));
+  let cantidad = Math.max(objetivo - p.stock, 1);
+  if (cantidad >= 10) cantidad = Math.ceil(cantidad / 5) * 5;
+  return cantidad;
+}
+const cantidad = (p) => estado.cantidades.get(p.id) ?? sugerida(p);
+const sePide = (p) => !estado.fuera.has(p.id);
+
+// --- Cargar de la nube ---
+async function pedirInventario() {
+  const cabeceras = { apikey: CLAVE_API, "Content-Type": "application/json" };
+  if (CLAVE_API.startsWith("eyJ")) cabeceras.Authorization = `Bearer ${CLAVE_API}`;
+  const respuesta = await fetch(`${API}/rest/v1/rpc/krud_ver`, {
+    method: "POST", headers: cabeceras, cache: "no-store", body: JSON.stringify({ clave_lectura: clave }),
+  });
+  if (!respuesta.ok) throw new Error(`La nube respondió con un error (${respuesta.status}).`);
+  return respuesta.json();
+}
+
+function mostrarProblema(icono, titulo, texto, conReintento) {
+  $("cargando").hidden = true;
+  $("app").hidden = true;
+  $("abajo").hidden = true;
+  $("problema").hidden = false;
+  $("problema-icono").innerHTML = ICONOS[icono];
+  $("problema-titulo").textContent = titulo;
+  $("problema-texto").textContent = texto;
+  $("reintentar").hidden = !conReintento;
+}
+
+let cargandoAhora = false;
+async function cargar() {
+  if (cargandoAhora) return;
+  if (!API || !CLAVE_API) {
+    mostrarProblema("ajustes", "Falta conectar la página con la nube",
+      "Quien instaló el programa tiene que poner los datos de Supabase en esta página.", false);
+    return;
+  }
+  if (!clave) {
+    mostrarProblema("enlace", "Abre el enlace que te mandaron",
+      "En el computador, en Krud, toca el botón del celular y luego «Enviar el enlace por WhatsApp». " +
+      "Abre ese enlace en este celular.", false);
+    return;
+  }
+  cargandoAhora = true;
+  $("recargar").classList.add("girando");
+  let sinInternet = false;
+  try {
+    const datos = await pedirInventario();
+    if (datos === null) {
+      // La copia guardada de este enlace ya no sirve (la de otro enlace se deja)
+      const copia = leerGuardado("krud_copia");
+      if (copia && copia.clave === clave) borrarGuardado("krud_copia");
+      mostrarProblema("candado", "Este enlace ya no funciona",
+        "Lo cambiaron desde el computador. En Krud, toca el botón del celular y manda el enlace nuevo.", false);
+      return;
+    }
+    estado.datos = datos;
+    guardar("krud_copia", { clave, datos });
+  } catch (error) {
+    // Sin internet: se muestra lo último que se cargó, si hay
+    const copia = leerGuardado("krud_copia");
+    if (copia && copia.clave === clave) {
+      estado.datos = copia.datos;
+      sinInternet = true;
+    } else if (!estado.datos) {
+      mostrarProblema("sinSenal", "No se pudo cargar el inventario",
+        "Revisa que el celular tenga internet e inténtalo otra vez.", true);
+      return;
+    } else {
+      sinInternet = true;
+    }
+  } finally {
+    cargandoAhora = false;
+    $("recargar").classList.remove("girando");
+  }
+  mostrarApp(sinInternet);
+}
+
+// --- Dibujar ---
+function mostrarApp(sinInternet) {
+  const d = estado.datos;
+  $("cargando").hidden = true;
+  $("problema").hidden = true;
+  $("app").hidden = false;
+  const nombre = (d.datos && d.datos.nombre_recibo) || d.nombre;
+  document.title = `Inventario de ${d.nombre}`;
+  $("nombre").textContent = nombre;
+  $("subido").textContent = d.actualizado ? `Actualizado ${describirCuando(d.actualizado)}` : "Todavía no se ha subido";
+
+  const avisos = [];
+  if (sinInternet) avisos.push("Sin internet: esto es lo último que se cargó en este celular.");
+  const horas = d.actualizado ? (Date.now() - new Date(d.actualizado)) / 3600000 : Infinity;
+  if (horas > 48) {
+    avisos.push("El computador no ha subido cambios hace más de dos días. Si se vendió algo después, aquí no se ve " +
+                "(se actualiza cuando el programa está abierto y con internet).");
+  }
+  $("avisos").replaceChildren(...avisos.map((texto) => elemento("p", "aviso", texto)));
+  dibujar();
+}
+
+function grupos(lista) {
+  const mapa = new Map();
+  for (const p of [...lista].sort(porCategoria)) {
+    if (!mapa.has(p.categoria)) mapa.set(p.categoria, []);
+    mapa.get(p.categoria).push(p);
+  }
+  return [...mapa.entries()];
+}
+
+function elemento(etiqueta, clase, texto) {
+  const nuevo = document.createElement(etiqueta);
+  if (clase) nuevo.className = clase;
+  if (texto !== undefined) nuevo.textContent = texto;
+  return nuevo;
+}
+
+// La tarjeta de una categoría, con su nombre y cuántos productos tiene
+function tarjeta(categoria, cuantos) {
+  const seccion = elemento("section", "tarjeta");
+  const cabeza = elemento("div", "cabeza");
+  cabeza.append(elemento("h2", "", categoria), elemento("span", "cuantos", plural(cuantos, "producto", "productos")));
+  seccion.append(cabeza);
+  return seccion;
+}
+
+function vacio(icono, titulo, texto, clase = "") {
+  const div = elemento("div", "vacio " + clase);
+  div.innerHTML = ICONOS[icono];
+  div.append(elemento("b", "", titulo), elemento("p", "", texto));
+  return div;
+}
+
+function dibujar() {
+  const todos = estado.datos.productos || [];
+  const bajos = todos.filter(esBajo);
+  const pedido = estado.pestana === "pedido";
+  $("tab-pedido").textContent = `Pedido (${numero.format(bajos.length)})`;
+  $("tab-inventario").textContent = `Inventario (${numero.format(todos.length)})`;
+  $("tab-pedido").setAttribute("aria-selected", pedido);
+  $("tab-inventario").setAttribute("aria-selected", !pedido);
+  $("hoja").replaceChildren();
+  if (pedido) dibujarPedido(bajos);
+  else dibujarInventario();
+}
+
+function dibujarPedido(bajos) {
+  const hoja = $("hoja");
+  const sePiden = bajos.filter(sePide);
+  $("abajo").hidden = !bajos.length;
+  $("enviar-todo").disabled = !sePiden.length;
+  $("enviar-todo").textContent = sePiden.length
+    ? `Enviar todo el pedido (${numero.format(sePiden.length)})` : "Marca lo que vas a pedir";
+  if (!bajos.length) {
+    hoja.append(vacio("listo", "Todo al día", "No hay productos por pedir.", "bien"));
+    return;
+  }
+  const categorias = grupos(bajos);
+  const intro = elemento("div", "intro");
+  intro.append(
+    elemento("p", "cuenta", `Hay que pedir ${plural(bajos.length, "producto", "productos")} de ` +
+                            `${plural(categorias.length, "categoría", "categorías")}.`),
+    elemento("p", "ayuda", "Cantidades para unas dos semanas. Cámbialas con − y +. " +
+                           "Toca la casilla para sacar un producto del pedido."),
+  );
+  hoja.append(intro);
+
+  for (const [categoria, lista] of categorias) {
+    const seccion = tarjeta(categoria, lista.length);
+    // Lo más urgente primero: lo agotado y lo que está más lejos de su mínimo
+    for (const p of lista.sort((a, b) => a.stock / a.minimo - b.stock / b.minimo || porNombre(a, b))) {
+      const cuantos = cantidad(p);
+      const marcado = sePide(p);
+      const div = elemento("div", "producto" + (marcado ? "" : " fuera"));
+      div.innerHTML = `
+        <button class="casilla" type="button" role="checkbox">${ICONOS.marca}</button>
+        <div class="texto"><div class="nombre"></div><p class="queda"></p></div>
+        <div class="cantidad">
+          <button type="button">−</button>
+          <output aria-live="polite"></output>
+          <button type="button">+</button>
+        </div>`;
+      const queda = p.stock <= 0 ? "Agotado" : `Quedan ${numero.format(p.stock)}`;
+      div.querySelector(".nombre").textContent = p.nombre;
+      div.querySelector(".queda").textContent = marcado ? queda : `${queda}. No se pide`;
+      div.querySelector("output").textContent = numero.format(cuantos);
+      const casilla = div.querySelector(".casilla");
+      casilla.setAttribute("aria-checked", marcado);
+      casilla.setAttribute("aria-label", `Pedir ${p.nombre}`);
+      casilla.onclick = () => {
+        if (estado.fuera.has(p.id)) estado.fuera.delete(p.id); else estado.fuera.add(p.id);
+        dibujar();
+      };
+      const [menos, mas] = div.querySelectorAll(".cantidad button");
+      menos.setAttribute("aria-label", `Pedir uno menos de ${p.nombre}`);
+      mas.setAttribute("aria-label", `Pedir uno más de ${p.nombre}`);
+      menos.disabled = cuantos <= 1;
+      menos.onclick = () => { estado.cantidades.set(p.id, Math.max(1, cantidad(p) - 1)); dibujar(); };
+      mas.onclick = () => { estado.cantidades.set(p.id, cantidad(p) + 1); dibujar(); };
+      seccion.append(div);
+    }
+    const deEsta = lista.filter(sePide);
+    const boton = elemento("button", "enviar", "Enviar este pedido");
+    boton.type = "button";
+    boton.setAttribute("aria-label", `Enviar el pedido de ${categoria}`);
+    boton.disabled = !deEsta.length;
+    boton.onclick = () => enviar(deEsta, categoria);
+    seccion.append(boton);
+    hoja.append(seccion);
+  }
+}
+
+function dibujarInventario() {
+  const hoja = $("hoja");
+  $("abajo").hidden = true;
+  const buscar = elemento("div", "buscar");
+  buscar.innerHTML = ICONOS.lupa +
+    '<input type="search" placeholder="Buscar un producto" autocomplete="off" enterkeyhint="search" aria-label="Buscar un producto">';
+  const input = buscar.querySelector("input");
+  input.value = estado.texto;
+  input.oninput = () => { estado.texto = input.value; estado.limite = POR_PAGINA; dibujarLista(); };
+  const lista = elemento("div");
+  lista.id = "lista";
+  hoja.append(buscar, lista);
+  dibujarLista();
+}
+
+function dibujarLista() {
+  const contenedor = $("lista");
+  contenedor.replaceChildren();
+  const todos = estado.datos.productos || [];
+  const buscado = sinTildes(estado.texto.trim());
+  const visibles = todos.filter((p) => !buscado || sinTildes(p.nombre).includes(buscado))
+    .sort((a, b) => porCategoria(a, b) || porNombre(a, b));
+  if (!visibles.length) {
+    contenedor.append(buscado
+      ? vacio("caja", "No se encontró", `No hay productos con «${estado.texto.trim()}».`)
+      : vacio("caja", "Inventario vacío", "Todavía no hay productos en el inventario."));
+    return;
+  }
+  const cuantos = new Map();
+  for (const p of visibles) cuantos.set(p.categoria, (cuantos.get(p.categoria) || 0) + 1);
+  let actual = null;
+  let seccion = null;
+  for (const p of visibles.slice(0, estado.limite)) {
+    if (p.categoria !== actual) {
+      actual = p.categoria;
+      seccion = tarjeta(p.categoria, cuantos.get(p.categoria));
+      contenedor.append(seccion);
+    }
+    const div = elemento("div", "item" + (esBajo(p) ? " bajo" : ""));
+    const nombre = elemento("span", "nombre", p.nombre);
+    if (esBajo(p)) nombre.append(elemento("span", "pedir", "Hay que pedir"));
+    div.append(nombre, elemento("span", "stock", numero.format(p.stock)));
+    seccion.append(div);
+  }
+  if (visibles.length > estado.limite) {
+    const mas = elemento("div", "mas");
+    const boton = elemento("button", "", `Mostrar más (quedan ${numero.format(visibles.length - estado.limite)})`);
+    boton.type = "button";
+    boton.onclick = () => { estado.limite += POR_PAGINA; dibujarLista(); };
+    mas.append(boton);
+    contenedor.append(mas);
+  }
+}
+
+// --- Enviar el pedido (WhatsApp u otra app, con el menú de compartir del celular) ---
+// Al proveedor solo le llega lo que tiene que traer y cuánto
+async function enviar(productos, categoria) {
+  if (!productos.length) return;
+  const d = estado.datos;
+  const hoy = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long" });
+  const nombre = (d.datos && d.datos.nombre_recibo) || d.nombre;
+  const linea = (p) => `• ${p.nombre}: ${numero.format(cantidad(p))}`;
+  const lineas = [];
+  if (categoria) {
+    lineas.push(`Pedido de ${nombre}, ${categoria} (${hoy}):`, "", ...[...productos].sort(porNombre).map(linea));
+  } else {
+    lineas.push(`Pedido de ${nombre} (${hoy}):`);
+    for (const [cat, lista] of grupos(productos)) lineas.push("", `${cat}:`, ...lista.sort(porNombre).map(linea));
+  }
+  const texto = lineas.join("\n");
+  if (navigator.share) {
+    try { await navigator.share({ text: texto }); return; }
+    catch (error) { if (error.name === "AbortError") return; }
+  }
+  location.href = "https://wa.me/?text=" + encodeURIComponent(texto);
+}
+
+// --- Eventos ---
+function cambiarPestana(pestana) {
+  estado.pestana = pestana;
+  estado.limite = POR_PAGINA;
+  dibujar();
+  scrollTo(0, 0);
+}
+$("tab-pedido").onclick = () => cambiarPestana("pedido");
+$("tab-inventario").onclick = () => cambiarPestana("inventario");
+$("enviar-todo").onclick = () => enviar((estado.datos.productos || []).filter((p) => esBajo(p) && sePide(p)));
+$("recargar").onclick = () => cargar();
+$("reintentar").onclick = () => { $("problema").hidden = true; $("cargando").hidden = false; cargar(); };
+
+function aplicarEscala() {
+  document.documentElement.style.setProperty("--escala", estado.escala);
+}
+$("letra").onclick = () => {
+  estado.escala = ESCALAS[(ESCALAS.indexOf(estado.escala) + 1) % ESCALAS.length];
+  guardar("krud_escala", estado.escala);
+  aplicarEscala();
+};
+
+// Al volver a la app (o cada pocos minutos con ella abierta) se recarga sola, sin perder lo que se cambió del
+// pedido; mientras se está escribiendo en el buscador no se redibuja
+function recargarSola() {
+  if (document.hidden || !estado.datos || document.activeElement?.type === "search") return;
+  cargar();
+}
+document.addEventListener("visibilitychange", recargarSola);
+setInterval(recargarSola, MINUTOS_ENTRE_RECARGAS * 60000);
+
+if (!ESCALAS.includes(estado.escala)) estado.escala = 1;
+aplicarEscala();
+cargar();
+</script>
+</body>
+</html>

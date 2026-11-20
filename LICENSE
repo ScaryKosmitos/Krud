@@ -1,0 +1,49 @@
+KRUD · SISTEMA DE GESTIÓN
+Copyright (c) 2026 Miguel (ScaryKosmitos). Todos los derechos reservados.
+
+Este programa es software propietario: no es software libre ni de código
+abierto. Usarlo significa aceptar estas condiciones.
+
+1. LICENCIA DE USO
+   Quien adquiere Krud de forma legítima (directamente del autor o de un
+   distribuidor autorizado por él) recibe una licencia no exclusiva e
+   intransferible para usarlo en su propio negocio y en los computadores de
+   ese negocio. La licencia es de uso: el programa no se vende ni se cede.
+
+2. LO QUE NO SE PERMITE
+   Sin permiso escrito del autor, no se permite:
+   a) instalarlo o copiarlo para otro negocio distinto al que lo adquirió;
+   b) venderlo, alquilarlo, prestarlo, regalarlo, publicarlo o distribuirlo
+      de cualquier forma, completo o en parte;
+   c) modificarlo, traducirlo o hacer programas derivados de él;
+   d) descompilarlo, desensamblarlo o aplicarle ingeniería inversa, salvo en
+      lo que la ley aplicable lo permita expresamente;
+   e) quitar o cambiar este aviso, el nombre del programa o el del autor.
+   Las copias de seguridad de los datos del negocio sí están permitidas.
+
+3. LOS DATOS SON DEL NEGOCIO
+   Los productos, las ventas, los clientes y demás datos que el negocio
+   registra en Krud son del negocio. El autor no los reclama como suyos.
+
+4. SIN GARANTÍA
+   El programa se entrega «tal como está». En la medida en que la ley lo
+   permita, el autor no garantiza que funcione sin errores ni que sirva para
+   un fin determinado, y no responde por pérdidas de datos, de ventas o de
+   ganancias que resulten de usarlo. Se recomienda mantener activado el
+   respaldo de los datos. El soporte y las actualizaciones se rigen por lo que
+   se acuerde aparte con cada negocio.
+
+5. COMPONENTES DE TERCEROS
+   Krud usa componentes de otros autores (por ejemplo Python, Flet, Flutter y
+   openpyxl), que se rigen por sus propias licencias. Están en el archivo
+   TERCEROS.txt y, en el programa instalado, en la carpeta «licencias».
+   Esta licencia no cambia los derechos que esas licencias dan sobre esos
+   componentes.
+
+6. TERMINACIÓN
+   Si se incumplen estas condiciones, la licencia termina y hay que dejar de
+   usar el programa y borrar sus copias. Los datos del negocio siguen siendo
+   del negocio.
+
+7. LEY APLICABLE
+   Estas condiciones se rigen por las leyes de la República de Colombia.
