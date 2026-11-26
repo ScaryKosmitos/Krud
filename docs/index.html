@@ -563,20 +563,30 @@ function dibujarLista() {
 }
 
 // --- Enviar el pedido (WhatsApp u otra app, con el menú de compartir del celular) ---
-// Al proveedor solo le llega lo que tiene que traer y cuánto
+// Al proveedor le llega un saludo según la hora, lo que tiene que traer y cuánto, y las gracias
+function saludo(fecha) {
+  const hora = fecha.getHours();
+  return hora < 12 ? "buenos días" : hora < 18 ? "buenas tardes" : "buenas noches";
+}
+
+function unidades(n) {
+  return `${numero.format(n)} ${n === 1 ? "unidad" : "unidades"}`;
+}
+
 async function enviar(productos, categoria) {
   if (!productos.length) return;
   const d = estado.datos;
-  const hoy = new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long" });
+  const ahora = new Date();
+  const hoy = ahora.toLocaleDateString("es-CO", { day: "numeric", month: "long" });
   const nombre = (d.datos && d.datos.nombre_recibo) || d.nombre;
-  const linea = (p) => `• ${p.nombre}: ${numero.format(cantidad(p))}`;
-  const lineas = [];
+  const linea = (p) => `• ${p.nombre}: ${unidades(cantidad(p))}`;
+  const lineas = [`Hola, ${saludo(ahora)}.`, `Le escribo de ${nombre}. Para hoy, ${hoy}, necesito:`];
   if (categoria) {
-    lineas.push(`Pedido de ${nombre}, ${categoria} (${hoy}):`, "", ...[...productos].sort(porNombre).map(linea));
+    lineas.push("", ...[...productos].sort(porNombre).map(linea));
   } else {
-    lineas.push(`Pedido de ${nombre} (${hoy}):`);
     for (const [cat, lista] of grupos(productos)) lineas.push("", `${cat}:`, ...lista.sort(porNombre).map(linea));
   }
+  lineas.push("", "Muchas gracias.");
   const texto = lineas.join("\n");
   if (navigator.share) {
     try { await navigator.share({ text: texto }); return; }
